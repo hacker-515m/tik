@@ -5,9 +5,19 @@ sleep 10
 
 clear
 
+display_banner() {
 
-
-
+    clear
+    echo -e "\e[32m"
+    echo "  __     ______  _____  _____  _____  _   _ "
+    echo "  \ \   / / __ \|  __ \|  __ \|  __ \| \ | |"
+    echo "   \ \_/ / |  | | |__) | |__) | |  | |  \| |"
+    echo "    \   /| |  | |  _  /|  _  /| |  | |     |"
+    echo "     | | | |__| | | \ \| | \ \| |__| | |\  |"
+    echo "     |_|  \____/|_|  \_\_|  \_\_____/|_| \_|"
+    echo -e "\e[0m"
+    sleep 2
+}
 
 display_hacking_animation() {
     for i in {1..10}; do
@@ -22,18 +32,9 @@ display_hacking_animation() {
     clear
 }
 
+# Start installation
 clear
-    clear
-    echo -e "\e[32m"
-    echo "  __     ______  _____  _____  _____  _   _ "
-    echo "  \ \   / / __ \|  __ \|  __ \|  __ \| \ | |"
-    echo "   \ \_/ / |  | | |__) | |__) | |  | |  \| |"
-    echo "    \   /| |  | |  _  /|  _  /| |  | | . ` |"
-    echo "     | | | |__| | | \ \| | \ \| |__| | |\  |"
-    echo "     |_|  \____/|_|  \_\_|  \_\_____/|_| \_|"
-    echo -e "\e[0m"
-    sleep 2
-
+display_banner
 display_hacking_animation
 
 # Update and install dependencies
