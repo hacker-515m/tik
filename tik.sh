@@ -1,12 +1,9 @@
 #!/bin/bash
 
 termux-setup-storage
-sleep 10
-
-clear
+sleep 5
 
 display_banner() {
-
     clear
     echo -e "\e[32m"
     echo "  __     ______  _____  _____  _____  _   _ "
@@ -32,23 +29,36 @@ display_hacking_animation() {
     clear
 }
 
-# Start installation
-clear
-display_banner
-display_hacking_animation
+configure_tor() {
+    torrc_path="$PREFIX/etc/tor/torrc"
+    if ! grep -q "ControlPort 9051" "$torrc_path"; then
+        echo -e "\n[INFO] Configuring Tor control port..."
+        echo "ControlPort 9051" >> "$torrc_path"
+        echo "CookieAuthentication 0" >> "$torrc_path"
+    fi
+}
 
-# Update and install dependencies
-echo -e "\e[32m[INFO] Updating system and installing dependencies...\e[0m"
-pkg update -y && pkg upgrade -y
-pkg install -y python tor
-pip install --upgrade pip
-pip install requests fake_useragent concurrent.futures
+main() {
+    clear
+    display_banner
+    display_hacking_animation
 
-# Start Tor service
-echo -e "\e[32m[INFO] Starting Tor service...\e[0m"
-tor &
-sleep 5
+    echo -e "\e[32m[INFO] Installing dependencies...\e[0m"
+    pkg update -y && pkg upgrade -y
+    pkg install -y python tor tmux
+    pip install --upgrade pip
+    pip install requests fake_useragent
 
-# Launching the main script
-echo -e "\e[32m[INFO] Running TikTok Guardian Hammer...\e[0m"
-python start.py
+    echo -e "\e[32m[INFO] Configuring Tor...\e[0m"
+    configure_tor
+
+    echo -e "\e[32m[INFO] Launching tool inside tmux session: \e[33mguardian_hammer\e[0m"
+
+    tmux kill-session -t guardian_hammer 2>/dev/null
+
+    tmux new-session -d -s guardian_hammer 'tor & sleep 5 && python start.py'
+
+    tmux attach-session -t guardian_hammer
+}
+
+main
