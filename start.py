@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TikTok Guardian Hammer v4.0 - Enhanced Tor Mode (Termux Optimized)
+TikTok Guardian Hammer v4.1 - Enhanced Tor Mode (Termux Optimized)
 """
 
 import os
@@ -20,7 +20,7 @@ from fake_useragent import UserAgent
 # ===== Global Configuration =====
 CONFIG = {
     "tor_socks": "socks5h://127.0.0.1:9050",
-    "max_threads": 30,  # Reduced for Termux stability
+    "max_threads": 30,
     "requests_per_round": 15,
     "control_port": 9051,
     "control_password": "mySecur3!Pass",
@@ -45,6 +45,16 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
+
+# ===== Tor Process Management =====
+def kill_existing_tor():
+    """Terminate any running Tor processes"""
+    try:
+        subprocess.run(["pkill", "-f", "tor"], check=True)
+        time.sleep(1)
+        print("[+] Killed existing Tor processes")
+    except subprocess.CalledProcessError:
+        pass
 
 # ===== Tor Configuration Setup =====
 def setup_torrc():
