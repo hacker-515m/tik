@@ -48,15 +48,16 @@ class AttackVectorPool:
         with self.lock:
             return random.choice(self.pool)
 
-    def _generate_headers(self):
-        device_id = f"LX{random.randint(1E15, 9E15):016d}"
-        return {
-            'User-Agent': UserAgent().random,
-            'X-Tt-Token': self._generate_fake_token(),
-            'X-SS-Stub': hashlib.md5(device_id.encode()).hexdigest(),
-            'X-Client-Lang': random.choice(['ar-SA', 'en-US']),
-            'X-Forwarded-For': '.'.join(str(random.randint(1, 255)) for _ in range(4))
-        }
+def _generate_headers(self):
+    device_id = f"LX{random.randint(int(1E15), int(9E15)):016d}"
+    return {
+        'User-Agent': UserAgent().random,
+        'X-Tt-Token': self._generate_fake_token(),
+        'X-SS-Stub': hashlib.md5(device_id.encode()).hexdigest(),
+        'X-Client-Lang': random.choice(['ar-SA', 'en-US']),
+        'X-Forwarded-For': '.'.join(str(random.randint(1, 255)) for _ in range(4))
+    }
+
 
     def _generate_fake_token(self):
         chars = "abcdef0123456789"
